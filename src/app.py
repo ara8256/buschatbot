@@ -153,14 +153,21 @@ import re
 from groq import Groq
 import secrets
 import json
+import pymysql
+
 app = Flask(__name__)
 CORS(app)
 
-list_to_be_asked = ["name", "phone#", "arrival city", "departure city", "date", "time"]
+list_to_be_asked = ["name", "phone#", "arrival city", "departure city", "date", "time","gender"]
 
 client = Groq(
     api_key="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",
 )
+
+MYSQL_HOST = "mysql-3f45e23a-wasamkhann-65e7.c.aivencloud.com"
+MYSQL_PORT = 21270
+MYSQL_USERNAME = "avnadmin"
+MYSQL_PASSWORD = "AVNS_dvBv9kmy0rprIpyKSUY"
 
 # Function definitions
 def list_updater(output_array, list_to_be_asked):
@@ -193,6 +200,7 @@ def get_chatbot_response(client, list_to_be_asked):
     )
     return chat_completion.choices[0].message.content
 
+
 def attribut(client, question, response):
     chat_completion = client.chat.completions.create(
         messages=[
@@ -216,6 +224,69 @@ def extract_text_from_query(query):
     matches = re.findall(r'\{(.*?)\}', combined_text, re.DOTALL)
     cleaned_matches = [match.replace('\n', '').strip() for match in matches]
     return cleaned_matches
+
+def list_to_dict(input_array):
+
+    input_str = input_array[0]
+    # Convert the string to a dictionary
+    data_dict = {}
+    items = input_str.split(',')
+    for item in items:
+        key, value = item.split(': ')
+        key = key.strip(' "')
+        value = value.strip(' "')
+        if value == 'null':
+            value = None
+        data_dict[key] = value
+    
+    return data_dict
+
+def update_database(MYSQL_HOST,MYSQL_PASSWORD,MYSQL_PORT,MYSQL_USERNAME,data_dict):
+    timeout = 10
+    connection = pymysql.connect(
+        charset="utf8mb4",
+        connect_timeout=timeout,
+        cursorclass=pymysql.cursors.DictCursor,
+        db="defaultdb",
+        host=MYSQL_HOST,
+        password=MYSQL_PASSWORD,
+        read_timeout=timeout,
+        port=MYSQL_PORT,
+        user=MYSQL_USERNAME,
+        write_timeout=timeout,
+    )
+
+    try:
+        cursor = connection.cursor()
+        
+        # Create table if it doesn't exist
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS busbooking (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            Seat INT,
+            DepartureCity VARCHAR(255),
+            ArrivalCity VARCHAR(255),
+            Name VARCHAR(255),
+            Mobile VARCHAR(255),
+            BookingDate VARCHAR(255),
+            BookingTime VARCHAR(255),
+            Gender VARCHAR(255)
+        )
+        """
+        cursor.execute(create_table_query)
+        
+        # Insert data into the table
+        insert_query = """
+        INSERT INTO busbooking (DepartureCity,ArrivalCity,Name,Mobile,BookingDate,BookingTime,Gender)
+        VALUES (%s, %s, %s, %s, %s, %s, %s)
+        """
+        cursor.execute(insert_query, (data_dict['departure city'], data_dict['arrival city'], data_dict['name'], data_dict['phone#'], data_dict['date'], data_dict['time'], data_dict['gender']))
+        
+        # Commit the transaction
+        connection.commit()
+        print("Updated Successfully...")
+    finally:
+        connection.close()
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -248,6 +319,11 @@ def chat():
             # Writing data to JSON file
             with open(file_path, 'w') as file:
                 json.dump(chat_state['output_array'], file, indent=4)
+                print("FINAL ARRAY : ",chat_state['output_array'])
+                # print(chat_state['output_array'])
+                booking_obj = list_to_dict(chat_state['output_array'])
+                print("FINAL DICT : ",booking_obj)
+                update_database(MYSQL_HOST,MYSQL_PASSWORD,MYSQL_PORT,MYSQL_USERNAME,booking_obj)    
             return jsonify({"status": "completed", "message": "Thank you for providing all the information your seat has been booked!"})
 
         next_question = get_chatbot_response(client, input_list)
