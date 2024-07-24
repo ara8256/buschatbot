@@ -12,6 +12,7 @@ function App() {
   const [text, setText] = useState('');
   const [messages, setMessages] = useState([]);
   const [responseMessage, setResponseMessage] = useState('');
+  const [ticketId, setTicketId] = useState(null); // State to store the ticket ID
 
 
 
@@ -44,8 +45,8 @@ useEffect(() => {
 
 
     const [chatState, setChatState] = useState({
-      output_array: [],
-      list_to_be_asked: ["name", "phone#", "arrival city", "departure city", "date", "time"],
+      output_array: {},
+      list_to_be_asked: ["name", "phone#", "arrival city", "departure city", "date", "time","gender"],
       last_question: ''
     });
     // let chatState = {
@@ -53,7 +54,37 @@ useEffect(() => {
     //   list_to_be_asked: ["name", "phone#", "arrival city", "departure city", "date", "time"],
     //   last_question: ''
     // };
+
+    const handleDownload = async () => {
+      if (ticketId) {
+        try {
+          const res = await fetch(`http://127.0.0.1:5000/download_ticket/${ticketId}`, {
+            method: 'GET',
+          });
+  
+          if (res.ok) {
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'ticket.pdf';
+            document.body.appendChild(a); // Append to body
+            a.click();
+            document.body.removeChild(a); // Remove from body
+            window.URL.revokeObjectURL(url); // Free up memory
+          } else {
+            console.error('Failed to download ticket');
+          }
+        } catch (error) {
+          console.error('Error downloading ticket:', error);
+        }
+      } else {
+        alert("No ticket ID available for download.");
+      }
+    };
+  
     
+
     const sendMessageToServer = async (response) => {
       try {
         const res = await fetch('http://127.0.0.1:5000/chat', {
@@ -73,7 +104,14 @@ useEffect(() => {
         }
 
         console.log(chatState)
-    
+        
+        // Store the ticket ID if booking is completed
+        if (data.ticket_id) {
+          setTicketId(data.ticket_id);
+        }
+
+        console.log(ticketId)
+
         // Handle both "next_question" and "message" fields in the response
         if (data.next_question) {
           setResponseMessage(data.next_question);
@@ -131,6 +169,9 @@ useEffect(() => {
     <div className="App">
       <MessageBox messages={messages}/>
       <ChatInput onSendMessage={handleSendMessage} />
+      <button onClick={handleDownload} className="btn btn-primary mt-3">
+        Download Ticket
+      </button>
     </div>
   );
 }

@@ -1,3 +1,9 @@
-[
-    "\"name\": \"Wasam\",  \"date\": \"22 July 2024\",  \"time\": \"11pm\",  \"gender\": \"male\",  \"phone#\": \"03057010160\",  \"departure city\": \"Lahore\",  \"arrival city\": \"Karachi\""
-]
+{
+    "departure city": "Islamabad",
+    "arrival city": "Karachi",
+    "name": "Wasam",
+    "date": "24 July",
+    "time": "5pm",
+    "gender": "male",
+    "phone#": "03057010160"
+}
