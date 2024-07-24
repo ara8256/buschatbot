@@ -203,7 +203,7 @@ client = Groq(
 MYSQL_HOST = "mysql-3f45e23a-wasamkhann-65e7.c.aivencloud.com"
 MYSQL_PORT = 21270
 MYSQL_USERNAME = "avnadmin"
-MYSQL_PASSWORD = "AVNS_dvBv9kmy0rprIpyKSUY"
+# MYSQL_PASSWORD = "AVNS_dvBv9kmy0rprIpyKSUY"
 
 # Function definitions
 def list_updater(output_dict, list_to_be_asked):
